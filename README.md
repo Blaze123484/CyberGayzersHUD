@@ -17,4 +17,4 @@ ArduinoJson Library
     
 LovyanGFX Library
     License: MIT License
-    GitHub: [LovyanGFX](https://github.com/lovyan03/LovyanGFX)https://github.com/lovyan03/LovyanGFX
+    GitHub: [LovyanGFX](https://github.com/lovyan03/LovyanGFX)
