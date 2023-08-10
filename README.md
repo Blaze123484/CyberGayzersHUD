@@ -4,7 +4,6 @@ A project repository for my CyberGayzers heads up display based on the esp32
 Utilized libraries include
 
 AsyncTCP Library
-
     License: MIT License
     GitHub: [AsyncTCP](https://github.com/me-no-dev/AsyncTCP)
     
