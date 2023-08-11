@@ -266,6 +266,26 @@ function toggleAutoCapture() {
     isAutoCaptureActive = !isAutoCaptureActive;
 }
 
+async function submitNetworkCredentials() {
+    var ssidInput = document.getElementById("ssidInput");
+    var passwordInput = document.getElementById("passwordInput");
+    var data = {
+        identifier: "save-credentials",
+        ssid: ssidInput.value,
+        password: passwordInput.value
+    };
+    websocket.send(JSON.stringify(data));
+}
+
+async function submitWifiMessage() {
+    var wifiMessageInput = document.getElementById("wifiMessageInput");
+    var data = {
+        identifier: "save-wifiMessage",
+        WifiMessage: wifiMessageInput.value
+    };
+    websocket.send(JSON.stringify(data));
+}
+
 // ... (rest of the existing JavaScript code) ...
 
 </script>
