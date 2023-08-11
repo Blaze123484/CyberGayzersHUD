@@ -17,18 +17,13 @@ const char* apPassword = "";
 
 // SSID and password for the hardcoded wifi network (will attempt to connect at boot)
 
-const char* hardcodedssid = "YOUR SSID"; // replace with your SSID
-const char* hardcodedpassword = "YOUR PASSWORD"; // replace with your Password
+const char* hardcodedssid = "Russell1"; // replace with your SSID
+const char* hardcodedpassword = "Netgear!9741"; // replace with your Password
 
 // Message that will display on boot (default connection instructions)
 
 String DisplayMessage = "";
 String Screencolor = "#011d57";
-
-// image settings for displayed jpgs (720 x 480 is the max resolution with color that I have been able to make work)
-
-uint8_t DisplayedImageWidth = 720;
-uint8_t DisplayedImageHeight = 480;
 
 // delay variables for periodic screen update
 
@@ -51,282 +46,71 @@ AsyncWebSocket ws("/ws");
 
 // data for the html webpage (includes websocket and screensharing scripting)
 
-const char index_html[] PROGMEM = R"rawliteral(
+const char config_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-/* Your existing styles here */
-.collapsible {
-  background-color: #777;
-  color: white;
-  cursor: pointer;
-  padding: 18px;
-  width: 50%;
-  border: none;
-  text-align: left;
-  outline: none;
-  font-size: 15px;
-}
 
-.active, .collapsible:hover {
-  background-color: #555;
-}
-
-.collapsible:after {
-  content: '\002B';
-  color: white;
-  font-weight: bold;
-  float: right;
-  margin-left: 5px;
-}
-
-.active:after {
-  content: "\2212";
-}
-
-.content {
-  padding: 0 18px;
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.2s ease-out;
-  background-color: #f1f1f1;
-}
 </style>
 </head>
 <body>
 
-<h2>GoggleOS Webserver</h2>
+<h2>GoggleOS Config Page</h2>
 
-<button class="collapsible">Connect To Server</button>
-<div class="content">
-    <input type="text" id="serverIp" style='font-size: 18px;' placeholder="Enter IP address">
-    <span id="connectionStatus" style='font-size: 18px; color: red;'>Not Connected</span>
-    <br>
-    <button id="connectButton" style='font-size: 18px;'>Connect</button>
-</div>
-
-<button class="collapsible">Enter New Wifi Credentials</button>
-<div class="content">
-    <input type="text" id="ssidInput" style='font-size: 18px;' placeholder="SSID" ><br>
-    <input type="password" id="passwordInput" style='font-size: 18px;' placeholder="Password"><br>
-    <button onclick="submitNetworkCredentials();" style='font-size: 18px;'>Connect</button>
-</div>
-
-<button class="collapsible">Submit Message</button>
-<div class="content">
-    <input type="text" id="wifiMessageInput" style='font-size: 18px;' placeholder="Message"><br>
-    <button onclick="submitWifiMessage();" style='font-size: 18px;'>Submit</button>
-</div>
-
-<button class="collapsible">Submit New Frame</button>
-<div class="content">
-    <!-- Replace the text input with an input element of type "file" for image selection -->
-    <input type="file" id="imageFileInput" accept="image/jpeg" style='font-size: 18px;'>
-    <br>
-    <button onclick="submitImage();" style='font-size: 18px;'>Submit</button>
-</div>
-<button class="collapsible">Screen Capture</button>
-<div class="content">
-    <br>
-    <video autoplay height="480px" hidden></video>
-    <br>
-    <canvas id="canvas" width="720" height="480"></canvas><br>
-    <button id="shareButton" onclick="startCapture();" style='font-size: 18px;'>Share</button>
-    <button id="stopShareButton" onclick="stopCapture();" style='font-size: 18px; display: none;'>Stop Sharing</button>
-    <button id="captureAndSendButton" onclick="captureAndSend();" style='font-size: 18px; display: none;'>Capture & Send</button>
-    
-    <!-- Toggleable button for auto capture -->
-    <button id="autoCaptureToggleButton" onclick="toggleAutoCapture();" style='font-size: 18px;'>Start Auto Capture</button>
-</div>
-
-<button class="collapsible">Camera</button>
-<div class="content">
-    <!--placeholder for future development stuff-->
-</div>
-
-<button class="collapsible">Reflash</button>
-<div class="content">
-    <!--placeholder for future development stuff-->
-</div>
+<input type="text" id="ssidInput" style='font-size: 18px;' placeholder="SSID" ><br>
+<input type="password" id="passwordInput" style='font-size: 18px;' placeholder="Password"><br>
+<button onclick="submitNetworkCredentials();" style='font-size: 18px;'>Connect</button>
 
 <script>
 var coll = document.getElementsByClassName("collapsible");
 var i;
 
-for (i = 0; i < coll.length; i++) {
-  coll[i].addEventListener("click", function() {
-    this.classList.toggle("active");
-    var content = this.nextElementSibling;
-    if (content.style.maxHeight){
-      content.style.maxHeight = null;
-    } else {
-      content.style.maxHeight = content.scrollHeight + "px";
-    } 
-  });
-}
-
-var connectionStatus = document.getElementById("connectionStatus");
-
 // WebSocket connection handling
-document.getElementById("connectButton").addEventListener("click", function() {
-  const serverIp = document.getElementById("serverIp").value;
-  if (!serverIp) {
-    console.error("Please enter the IP address of the ESP32 server.");
-    return;
-  }
+var websocket;
+var gateway = `ws://${window.location.hostname}/ws`;
+window.addEventListener('load', onLoad);
 
-  const websocketAddress = `ws://${serverIp}/ws`;
-  websocket = new WebSocket(websocketAddress);
-  console.log("attempting websocket connection");
+function initWebSocket() {
+  console.log('Trying to open a WebSocket connection...');
+  websocket = new WebSocket(gateway);
   websocket.onopen = onOpen;
   websocket.onclose = onClose;
   websocket.onmessage = onMessage;
-});
+}
+
+function onLoad(event) {
+  initWebSocket();
+}
 
 function onOpen(event) {
     console.log('Connection opened');
-    connectionStatus.textContent = "Connected";
-    connectionStatus.style.color = "green";
 }
 
 function onClose(event) {
-    console.log('Connection closed');
-    connectionStatus.textContent = "Not Connected";
-    connectionStatus.style.color = "red";
-    stopCapture();
-    clearInterval(autoCaptureInterval); // Stop the auto capture interval
-    document.getElementById("autoCaptureToggleButton").textContent = "Start Auto Capture";
-    
+  console.log('Connection closed');
   setTimeout(initWebSocket, 2000);
 }
 
-function onMessage(event) {
-  var state;
-  if (event.data == "1"){
-    state = "ON";
-  } else {
-    state = "OFF";
-  }
-  document.getElementById('state').innerHTML = state;
-}
-
-// Consolidated function for submitting image data
-async function submitImage() {
-  var imageFileInput = document.getElementById("imageFileInput");
-  var imageFile = imageFileInput.files[0]; // Get the selected image file
-
-  if (!imageFile) {
-    console.log("No image selected.");
-    return;
-  }
-
-  // Read the selected image file as an ArrayBuffer (raw binary data)
-  var reader = new FileReader();
-
-  reader.onloadend = function (e) {
-    if (e.target.readyState === FileReader.DONE) {
-      var rawImageData = e.target.result;
-      websocket.send("START_IMAGE_TRANSMISSION");
-      websocket.send(new Uint8Array(rawImageData)); // Send the Uint8Array directly
-      websocket.send("END_IMAGE_TRANSMISSION");
-    } else {
-      console.log("Error reading the file.");
-    }
-  };
-
-  reader.readAsArrayBuffer(imageFile);
-}
-
-var canvas = document.querySelector('#canvas');
-var ctx = canvas.getContext('2d');
-var video = document.querySelector('video');
-var desiredWidth = 720;
-var desiredHeight = 480;
-
-var shareButton = document.getElementById("shareButton");
-var stopShareButton = document.getElementById("stopShareButton");
-var captureAndSendButton = document.getElementById("captureAndSendButton");
-
-async function startCapture() 
+function onMessage(event) 
 {
-    video.srcObject = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "always" }, audio: false });
-    video.addEventListener('play', function() {
-        drawVideoFrame();
-    });
-
-    shareButton.style.display = "none";
-    stopShareButton.style.display = "block";
-    captureAndSendButton.style.display = "block";
+  console.log("onMessageTrigger");
 }
 
-function stopCapture() 
-{
-    const stream = video.srcObject;
-    const tracks = stream.getTracks();
-
-    tracks.forEach(function(track) {
-        track.stop();
-    });
-
-    video.srcObject = null;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    shareButton.style.display = "block";
-    stopShareButton.style.display = "none";
-    captureAndSendButton.style.display = "none";
+function submitNetworkCredentials() {
+    var ssidInput = document.getElementById("ssidInput");
+    var passwordInput = document.getElementById("passwordInput");
+    var data = {
+        identifier: "save-credentials",
+        ssid: ssidInput.value,
+        password: passwordInput.value
+    };
+    websocket.send(JSON.stringify(data));
 }
-
-function drawVideoFrame() 
-{
-    if (video.paused || video.ended) {
-        return;
-    }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(video, 0, 0, desiredWidth, desiredHeight);
-    requestAnimationFrame(drawVideoFrame);
-}
-
-function captureAndSend() 
-{
-    const imageData = canvas.toDataURL('image/jpeg', 0.3);
-
-    // Convert the image data URL to a Blob and send it as an ArrayBuffer
-    fetch(imageData)
-        .then(response => response.blob())
-        .then(blob => {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const arrayBuffer = event.target.result;
-                websocket.send("START_IMAGE_TRANSMISSION");
-                websocket.send(new Uint8Array(arrayBuffer)); // Send the Uint8Array directly
-                websocket.send("END_IMAGE_TRANSMISSION");
-            };
-            reader.readAsArrayBuffer(blob);
-        });
-}
-var isAutoCaptureActive = false;
-
-function toggleAutoCapture() {
-    if (!isAutoCaptureActive) {
-        autoCaptureInterval = setInterval(captureAndSend, 2500); // Capture and send every 2.5 seconds
-        document.getElementById("autoCaptureToggleButton").textContent = "Stop Auto Capture";
-    } else {
-        clearInterval(autoCaptureInterval); // Stop the auto capture interval
-        document.getElementById("autoCaptureToggleButton").textContent = "Start Auto Capture";
-    }
-    
-    isAutoCaptureActive = !isAutoCaptureActive;
-}
-
-// ... (rest of the existing JavaScript code) ...
-
 </script>
-
 </body>
 </html>
-
 )rawliteral";
 
 // definitions and declarations of the lovyan GFX composite example, instructions and comments contained 
@@ -411,7 +195,7 @@ void notifyClients()
 
 void handleRoot(AsyncWebServerRequest* request) 
 {
-  request->send(200, "text/html", index_html);
+  request->send(200, "text/html", config_html);
 }
 
 // draws the contents of the decoded uint8_t array to the screen and then writes the connected network, IP, and displaymessage
