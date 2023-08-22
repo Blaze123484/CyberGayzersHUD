@@ -81,6 +81,22 @@
     <canvas id="canvas" width="720" height="480"></canvas><br>
     <button id="shareButton" onclick="startCapture();" style='font-size: 18px;'>Share</button>
     <button id="stopShareButton" onclick="stopCapture();" style='font-size: 18px; display: none;'>Stop Sharing</button>
+    <label for="intervalTicker">Interval (ms):</label>
+    <input type="number" id="intervalTicker" value="2500">
+    <!-- Quality ticker for captured JPEG -->
+    <label for="qualityTicker">Quality:</label>
+    <select id="qualityTicker">
+        <option value="1">1</option>
+        <option value="0.9">0.9</option>
+        <option value="0.8">0.8</option>
+        <option value="0.7">0.7</option>
+        <option value="0.6">0.6</option>
+        <option value="0.5">0.5</option>
+        <option value="0.4">0.4</option>
+        <option value="0.3">0.3</option>
+        <option value="0.2">0.2</option>
+        <option value="0.1">0.1</option>
+    </select>
     <button id="captureAndSendButton" onclick="captureAndSend();" style='font-size: 18px; display: none;'>Capture & Send</button>
     
     <!-- Toggleable button for auto capture -->
@@ -234,9 +250,8 @@ function drawVideoFrame()
     requestAnimationFrame(drawVideoFrame);
 }
 
-function captureAndSend() 
-{
-    const imageData = canvas.toDataURL('image/jpeg', 0.3);
+async function captureAndSend() {
+    const imageData = canvas.toDataURL('image/jpeg', parseFloat(document.getElementById("qualityTicker").value));
 
     // Convert the image data URL to a Blob and send it as an ArrayBuffer
     fetch(imageData)
@@ -256,7 +271,8 @@ var isAutoCaptureActive = false;
 
 function toggleAutoCapture() {
     if (!isAutoCaptureActive) {
-        autoCaptureInterval = setInterval(captureAndSend, 2500); // Capture and send every 2.5 seconds
+        const interval = parseInt(document.getElementById("intervalTicker").value);
+        autoCaptureInterval = setInterval(captureAndSend, interval);
         document.getElementById("autoCaptureToggleButton").textContent = "Stop Auto Capture";
     } else {
         clearInterval(autoCaptureInterval); // Stop the auto capture interval
